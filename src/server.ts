@@ -1,31 +1,73 @@
-import Blockchain from "./models/blockchain"
-import Block, { genesisBlock } from "./models/block"
+import { mineBlock, getBlockchain } from "./controller/blockchain"
+import Block from "./models/block"
 import express from "express"
+import cors from "cors"
 import * as bodyParser  from "body-parser"
-
-const blockchain = new Blockchain(genesisBlock)
+import { getSockets, connectToPeers, initP2PServer, broadcastLatest } from './p2p'
+import portscanner from 'portscanner'
 
 const initHttpServer = ( myHttpPort: number ) => {
   const app = express();
+  app.use(cors());
   app.use(bodyParser.json());
 
+  app.get('/broadcast',(req,res) => {
+      broadcastLatest()
+      res.send(200)
+  })
   app.get('/blocks', (req, res) => {
-      res.send(blockchain.getBlockchain());
+      res.send(getBlockchain());
   });
   app.post('/mineBlock', (req, res) => {
-      const newBlock: Block = blockchain.mineNewBlock(req.body.data)
+      const newBlock: Block = mineBlock(req.body.data)
+      broadcastLatest()
       res.send(newBlock);
   });
   
-  // app.get('/peers', (req, res) => {
-  //     res.send(getSockets().map(( s: any ) => s._socket.remoteAddress + ':' + s._socket.remotePort));
-  // });
-  // app.post('/addPeer', (req, res) => {
-  //     connectToPeers(req.body.peer);
-  //     res.send();
-  // });
+  app.get('/peers', (req, res) => {
+      res.send(getSockets().map(( s: any ) => s._socket.remoteAddress + ':' + s._socket.remotePort));
+  });
+  app.post('/addPeer', (req, res) => {
+      connectToPeers(req.body.peer);
+      res.send();
+  });
 
   app.listen(myHttpPort, () => {
       console.log('Listening http on port: ' + myHttpPort);
   });
 };
+
+
+const checkPort = (port: number):Promise<number> => {
+ return new Promise(async (resolve,reject) => {
+     await portscanner.checkPortStatus(port,(_,status: string) => {
+         if(status === 'closed'){
+             resolve(port)
+         } else {
+             reject()
+         }
+     })
+ })
+}
+
+const findFreePort = async (startPort:number):Promise<number> => {
+    let port = startPort
+    while (true) {
+     try {
+      return await checkPort(port)
+     } catch (e) {
+        port++
+     }
+    }
+}
+
+findFreePort(8000).then((port:number) => {
+    initHttpServer(port)
+})
+
+export let p2pPort = 11_111
+
+findFreePort(11_111).then((port:number) => {
+    p2pPort = port
+    initP2PServer(p2pPort)
+})
