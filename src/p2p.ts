@@ -4,7 +4,6 @@ import { addBlockToChain, getBlockchain, replaceChain, getLatestBlock } from '..
 import Block, {isValidBlockStructure} from '../src/models/block'
 import portscanner from 'portscanner'
 import { p2pPort } from './server'
-import { connect } from 'http2';
 
 const sockets: WebSocket[] = [];
 
@@ -48,7 +47,7 @@ const initP2PServer = async(p2pPort: number) => {
 
 const getSockets = () => sockets;
 
-
+export const getSocketsLength = () => sockets.length
 
 const initConnection = (ws: WebSocket) => {
     sockets.push(ws);

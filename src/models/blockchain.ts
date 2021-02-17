@@ -1,8 +1,8 @@
-import Block from "./block"
+import Block, { validateBlock, generateNextBlock } from "./block"
 
 const isValidNewBlock = (newBlock: Block, previousBlock: Block | undefined): boolean => {
   let result = true;
-  result &&= newBlock.validate()
+  result &&= validateBlock(newBlock)
   if(!previousBlock){
     return result
   }
@@ -31,12 +31,12 @@ const istValidGenesisBlock = (genesis: Block) => isValidNewBlock(genesis, undefi
 
 
 export const getLastBlock = (chain: Block[]): Block => {
-  return new Block(chain[chain.length - 1])
+  return chain[chain.length - 1]
 }
 
 export const mineNewBlock = (chain: ValidatedBlockchain, data: string): Block => {
-  const lastBlock = getLastBlock(chain)
-  const newBlock = lastBlock.generateNextBlock(data)
+  const lastBlock = getLastBlock(chain) 
+  const newBlock = generateNextBlock(lastBlock,data)
   return newBlock
 }
 
@@ -53,8 +53,7 @@ export const validateBlockchain = (chain: Block[]): boolean => {
 }
 
 export const addNewBlockToChain = (chain: ValidatedBlockchain, block: Block): ValidatedBlockchain => {
-  const newBlock = new Block(block)
-  return isValidNewBlock(newBlock,getLastBlock(chain))
+  return isValidNewBlock(block,getLastBlock(chain))
     ? chain.concat([block])
     : chain
 }
