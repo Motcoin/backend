@@ -10,7 +10,7 @@ export default interface Block {
   hash?: string
 }
 
-const makeBlock = ( block: any ) :Block => {
+export const makeBlock = ( block: any ) :Block => {
   return {
     ...block,
     hash: block.hash || calculateHash(block as Block)
@@ -30,14 +30,22 @@ export const calculateHash = (block: Block): string => {
 
 export const generateNextBlock = (block: Block, data: string): Block => {
   const index = block.index + 1
-  const previousHash = block.hash
+  const previousHash = block.hash || "GENESIS BLOCK!"
   const timestamp = Date.now()
 
-  return makeBlock({ index,previousHash,timestamp,data})
+  return({ index,previousHash,timestamp,data, difficulty: 0, nonce: 0 })
+}
+
+const isValidTimestamp = (timestamp: number) => {
+  return timestamp <= Date.now() + 6000 && timestamp >= Date.now() - 6000
+}
+
+const isGenesis = (block: Block) => {
+  return !block.previousHash
 }
 
 export const validateBlock = (block: Block): boolean => {
-  return block.hash === calculateHash(block)
+  return block.hash === calculateHash(block) && (isValidTimestamp(block.timestamp) || isGenesis(block))
 }
 
 export const isValidBlockStructure = (block: Block): boolean => {
@@ -52,9 +60,11 @@ const genesisStamp = 1613312360254
 const genesisData = 'Hello World!, im Tomcoin!'
 
 // genesisHash = 'fa24a6c4c5a849abcdebd6c20348f556dc9e99382f4657816178c600abc452f8'
-export const genesisBlock: Block = makeBlock(
-{index: 0, previousHash: '', timestamp: genesisStamp, data: genesisData }
-)
+export const blank: Block = {index: 0, previousHash: '', timestamp: genesisStamp, data: genesisData, difficulty: 2, nonce: 0 }
+
+import { findBlock } from "../pow"
+
+export const genesisBlock = findBlock(blank)
 
 
 
