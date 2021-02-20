@@ -1,26 +1,76 @@
-import Block, { validateBlock, generateNextBlock } from "./block"
+import Block, { validateBlock, generateNextBlock, calculateHash } from "./block"
+
+export enum InvalidNewBlockErrorType {
+  HASH,
+  PREVIOUS_HASH,
+  INDEX,
+  TIMESTAMP
+}
+
+export const printInvalidBlocktError = (newBlock: Block, previousBlock: Block|undefined, type: InvalidNewBlockErrorType) => {
+  console.error('Block Invalid!')
+  console.table(newBlock)
+  switch(type){
+    case InvalidNewBlockErrorType.HASH: {
+      console.error('Invalid Hash of new Block:')
+      console.table({ is: newBlock.hash, shouldBe: calculateHash(newBlock)})
+      break
+    }
+    case InvalidNewBlockErrorType.PREVIOUS_HASH: {
+      console.error('Invalid Previous Hash')
+      console.table({ is: newBlock.hash, shouldBe: previousBlock?.hash })
+      break
+    }
+    case InvalidNewBlockErrorType.INDEX: {
+      console.error('Invalid index')
+      console.table({is: newBlock.index, shouldBe: previousBlock?.index || 0 + 1})
+    }
+    case InvalidNewBlockErrorType.TIMESTAMP: {
+      console.error('New Blocks Timestamp is invalid')
+      console.table({ new: newBlock.timestamp, prev: previousBlock?.timestamp  })
+    }
+  }
+}
+
+const isValidTimestamp = (newBlock: Block, previousBlock: Block) => {
+  const newT = newBlock.timestamp / 1000
+  const prevT = previousBlock.timestamp / 1000
+  const now = Date.now() / 1000
+  if(!previousBlock){
+    return true
+  } else {
+    return  prevT - 60 < newT && newT - 60 < now
+  }
+}
 
 const isValidNewBlock = (newBlock: Block, previousBlock: Block | undefined): boolean => {
   let result = true;
   result &&= validateBlock(newBlock)
+  
   if(!previousBlock){
     return result
   }
 
   if(!result){
-    console.log('invalid hash');
+    return result
+ 
+  }
+  const printErr = (type: InvalidNewBlockErrorType) => printInvalidBlocktError(newBlock,previousBlock,type)
+  result &&= newBlock.previousHash === previousBlock.hash
+  if(!result){
+    printErr(InvalidNewBlockErrorType.PREVIOUS_HASH)
     return result
   }
 
-  result &&= newBlock.previousHash === previousBlock.hash
-  if(!result){
-    console.log('invalid previous hash!');
+  result &&= isValidTimestamp(newBlock,previousBlock)
+  if(!result) {
+    printErr(InvalidNewBlockErrorType.TIMESTAMP)
     return result
   }
 
   result &&= newBlock.index === previousBlock.index + 1
   if(!result){
-    console.log('invalid index!');
+    printErr(InvalidNewBlockErrorType.INDEX)
     return result
   }
 
@@ -58,6 +108,9 @@ export const addNewBlockToChain = (chain: ValidatedBlockchain, block: Block): Va
     : chain
 }
 
+export const getComputationalEffort = (chain: ValidatedBlockchain) => {
+  return chain.reduce((acc,curr) => acc += Math.pow(2,curr.difficulty),0)
+}
 
 type ValidatedBlockchain = Block[]
 export const makeValidatedBlockchain = (chain: Block[]) => {

@@ -1,5 +1,9 @@
+import { rejects } from 'assert';
 import Block,{calculateHash, makeBlock} from './models/block'
 import { getLastBlock } from './models/blockchain'
+import { getOtherNodeFoundHash,setOtherNodeFoundHash } from './p2p'
+
+const HASH_FUNCTION_CALLS_PER_NODE_EVENT_CYCLE = 1000;
 
 // in seconds
 const BLOCK_GENERATION_INTERVAL: number = 10;
@@ -14,8 +18,6 @@ const hexToBinary = (hex: string):string => {
 export const hashMatchesDifficulty = (hash: string, difficulty: number) => {
   const binaryHash = hexToBinary(hash)
   const requiredPrefix = '0'.repeat(difficulty)
-  console.log(binaryHash);
-  
   return binaryHash.startsWith(requiredPrefix)
 }
 
@@ -47,19 +49,39 @@ export const getDifficulty = (chain: Block[]) => {
   }
 }
 
-export const findBlock = (block: Block) :Block => {
-  let nonce = 0;
-  console.log('Starting minde process with difficulty', block.difficulty,'...');
-  
-  while(true) {
-    const testBlock = { ...block, nonce}
-    const hash = calculateHash(testBlock)
-    if(hashMatchesDifficulty(hash, block.difficulty)){
-      return makeBlock({
-        ...testBlock,
-        hash
-      })
+
+//calculate HASH_FUNCTION_CALLS_PER_NODE_EVENT_CYCLE amount of hashes then
+//resume wiht the cycle and queue the next 1000 for next cycle
+export const findBlock = (block: Block): Promise<Block> =>  {
+  return new Promise((resolve,reject) => {
+    let nonce = 0
+    let currentBlock = block
+    let foundHash = false
+    const findNonce = () => {
+      let counter = 0;
+      while(counter < HASH_FUNCTION_CALLS_PER_NODE_EVENT_CYCLE) {
+        currentBlock = { ...block, nonce }
+        currentBlock.hash = calculateHash(currentBlock)
+        console.log(nonce,':',currentBlock.hash);
+        if(getOtherNodeFoundHash()){
+          setOtherNodeFoundHash(false)
+          return reject('Some other node found it.')
+        }
+        if(!hashMatchesDifficulty(currentBlock.hash, block.difficulty)){
+          nonce++
+        } else {
+          foundHash = true
+        }
+        counter++
+      }
+      if(foundHash){
+        console.log('Found hash: ', currentBlock.hash);
+        return resolve(makeBlock({ ...currentBlock, hash: calculateHash(currentBlock)}))
+      } else {
+        setImmediate(findNonce)
+      }
     }
-    nonce++
-  }
+    console.log('Find hash...');
+    findNonce()
+  })
 }

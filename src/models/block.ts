@@ -1,4 +1,5 @@
 import { SHA256 } from "crypto-js"
+import { printInvalidBlocktError,InvalidNewBlockErrorType } from "./blockchain"
 
 export default interface Block {
   index: number,
@@ -36,16 +37,13 @@ export const generateNextBlock = (block: Block, data: string): Block => {
   return({ index,previousHash,timestamp,data, difficulty: 0, nonce: 0 })
 }
 
-const isValidTimestamp = (timestamp: number) => {
-  return timestamp <= Date.now() + 6000 && timestamp >= Date.now() - 6000
-}
-
-const isGenesis = (block: Block) => {
-  return !block.previousHash
-}
-
 export const validateBlock = (block: Block): boolean => {
-  return block.hash === calculateHash(block) && (isValidTimestamp(block.timestamp) || isGenesis(block))
+  const hash = block.hash === calculateHash(block)
+  if(!hash){
+    printInvalidBlocktError(block, undefined,InvalidNewBlockErrorType.HASH)
+    return false
+  }
+  return true
 }
 
 export const isValidBlockStructure = (block: Block): boolean => {
@@ -58,13 +56,16 @@ export const isValidBlockStructure = (block: Block): boolean => {
 
 const genesisStamp = 1613312360254
 const genesisData = 'Hello World!, im Tomcoin!'
+const genesisHash = '00000e44726feba3bd3d363ed7103c90bddd6008ebf266da1aca91894c64a5cb'
+const genesisNonce = 56031
 
-// genesisHash = 'fa24a6c4c5a849abcdebd6c20348f556dc9e99382f4657816178c600abc452f8'
-export const blank: Block = {index: 0, previousHash: '', timestamp: genesisStamp, data: genesisData, difficulty: 2, nonce: 0 }
+export const blank: Block = {index: 0, previousHash: '', timestamp: genesisStamp, data: genesisData, difficulty: 5, nonce: genesisNonce, hash: genesisHash }
 
-import { findBlock } from "../pow"
+// import { findBlock } from "../pow"
 
-export const genesisBlock = findBlock(blank)
+export const genesisBlock = blank
+console.log('found!',genesisBlock);
+
 
 
 

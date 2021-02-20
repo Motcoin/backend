@@ -1,7 +1,7 @@
 import WebSocket from 'ws';
 import { Server } from 'ws';
-import { addBlockToChain, getBlockchain, replaceChain, getLatestBlock } from '../src/controller/blockchain';
-import Block, {isValidBlockStructure} from '../src/models/block'
+import { addBlockToChain, getBlockchain, replaceChain, getLatestBlock, getIsMining } from '../src/controller/blockchain';
+import Block, { isValidBlockStructure } from '../src/models/block'
 import portscanner from 'portscanner'
 import { p2pPort } from './server'
 
@@ -72,7 +72,7 @@ const initMessageHandler = (ws: WebSocket) => {
             console.log('could not parse received JSON message: ' + data);
             return;
         }
-        console.log('Received message' + JSON.stringify(message));
+        console.log('Received message' + JSON.stringify(message.type));
         switch (message.type) {
             case MessageType.QUERY_LATEST:
                 write(ws, responseLatestMsg());
@@ -118,34 +118,39 @@ const initErrorHandler = (ws: WebSocket) => {
     ws.on('error', () => closeConnection(ws));
 };
 
+
+let otherNodeFoundHash = false
+export const getOtherNodeFoundHash = () => otherNodeFoundHash
+export const setOtherNodeFoundHash = (newValue:boolean) => otherNodeFoundHash = newValue
+
+const stopMining = () => {
+    if(getIsMining()){
+        setOtherNodeFoundHash(true);
+    }
+}
+
 const handleBlockchainResponse = (receivedBlocks: Block[]) => {
-    if (receivedBlocks.length === 0) {
-        console.log('received block chain size of 0');
-        return;
+    const latestBlock = getLatestBlock()
+    const latestReceivedBlock = receivedBlocks[receivedBlocks.length - 1]
+    if(!receivedBlocks.length){
+        console.log('received empty blockchain');
+        return
     }
-    const latestBlockReceived: Block = receivedBlocks[receivedBlocks.length - 1];
-    if (!isValidBlockStructure(latestBlockReceived)) {
-        console.log('block structuture not valid');
-        return;
+    if(latestBlock.index >= latestReceivedBlock.index){
+        console.log('received smaller or same blockchain, do nothing');
+        return
     }
-    const latestBlockHeld: Block = getLatestBlock();
-    if (latestBlockReceived.index > latestBlockHeld.index) {
-        console.log('blockchain possibly behind. We got: '
-            + latestBlockHeld.index + ' Peer got: ' + latestBlockReceived.index);
-        if (latestBlockHeld.hash === latestBlockReceived.previousHash) {
-            if (addBlockToChain(latestBlockReceived)) {
-                broadcast(responseLatestMsg());
-            }
-        } else if (receivedBlocks.length === 1) {
-            console.log('We have to query the chain from our peer');
-            broadcast(queryAllMsg());
-        } else {
-            console.log('Received blockchain is longer than current blockchain');
-            replaceChain(receivedBlocks);
-        }
-    } else {
-        console.log('received blockchain is not longer than received blockchain. Do nothing');
+    if(latestReceivedBlock.index === latestBlock.index + 1 && addBlockToChain(latestReceivedBlock)){
+        console.log('new received block can be added to blockchain, so stop mining.');
+        stopMining()
+        broadcast(responseLatestMsg())
+        return
     }
+    if(receivedBlocks.length === 1){
+        queryAllMsg()
+        return
+    }
+    replaceChain(receivedBlocks)
 };
 
 const broadcastLatest = (): void => {
@@ -163,4 +168,4 @@ const connectToPeers = (newPeer: string): void => {
     });
 };
 
-export {connectToPeers, broadcastLatest, initP2PServer, getSockets};
+export { connectToPeers, broadcastLatest, initP2PServer, getSockets };

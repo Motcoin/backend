@@ -19,9 +19,10 @@ const initHttpServer = ( myHttpPort: number ) => {
       res.send(getBlockchain());
   });
   app.post('/mineBlock', (req, res) => {
-      const newBlock: Block = mineBlock(req.body.data)
-      broadcastLatest()
-      res.send(newBlock);
+      mineBlock(req.body.data).then(() => {
+        broadcastLatest()
+        res.sendStatus(200)
+      })
   });
   
   app.get('/peers', (req, res) => {
