@@ -1,5 +1,5 @@
 import { SHA256 } from "crypto-js"
-import { printInvalidBlocktError,InvalidNewBlockErrorType } from "./blockchain"
+import { InvalidHashError } from "./error"
 
 export default interface Block {
   index: number,
@@ -40,8 +40,7 @@ export const generateNextBlock = (block: Block, data: string): Block => {
 export const validateBlock = (block: Block): boolean => {
   const hash = block.hash === calculateHash(block)
   if(!hash){
-    printInvalidBlocktError(block, undefined,InvalidNewBlockErrorType.HASH)
-    return false
+    throw new InvalidHashError(block)
   }
   return true
 }
@@ -61,10 +60,7 @@ const genesisNonce = 56031
 
 export const blank: Block = {index: 0, previousHash: '', timestamp: genesisStamp, data: genesisData, difficulty: 5, nonce: genesisNonce, hash: genesisHash }
 
-// import { findBlock } from "../pow"
-
 export const genesisBlock = blank
-console.log('found!',genesisBlock);
 
 
 

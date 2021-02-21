@@ -4,6 +4,7 @@ import { getDifficulty, findBlock } from '../pow'
 
 let blockchain = makeValidatedBlockchain([genesisBlock])
 
+
 let isMining = false
 export const getIsMining = () => isMining
 export const mineBlock = (data :string): Promise<Block|void> => {
@@ -29,7 +30,7 @@ export const mineBlock = (data :string): Promise<Block|void> => {
 }
 
 export const replaceChain = (chain: Block[]) => {
-  const newBlockchain = makeValidatedBlockchain(chain);
+  const newBlockchain = makeValidatedBlockchain(chain)
   console.log('we maybe need to replace blockchain.');
   console.table({new: getComputationalEffort(newBlockchain),old:getComputationalEffort(blockchain)});
   
