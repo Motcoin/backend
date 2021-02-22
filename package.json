@@ -6,7 +6,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "run": "ts-node ./src/server.ts",
-    "kill": "bash ./killws.sh"
+    "kill": "bash ./killws.sh",
+    "start:debug": "ts-node --ignore false ./src/server.ts"
   },
   "keywords": [],
   "author": "",
