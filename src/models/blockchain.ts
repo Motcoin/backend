@@ -76,7 +76,7 @@ export const getComputationalEffort = (chain: ValidatedBlockchain) => {
   return chain.reduce((acc,curr) => acc += Math.pow(2,curr.difficulty),0)
 }
 
-type ValidatedBlockchain = Block[]
+export type ValidatedBlockchain = Block[]
 export const makeValidatedBlockchain = (chain: Block[]) => {
   try{
     validateBlockchain(chain)

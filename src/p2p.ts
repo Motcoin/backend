@@ -1,7 +1,8 @@
 import WebSocket from 'ws';
 import { Server } from 'ws';
-import { addBlockToChain, getBlockchain, replaceChain, getLatestBlock, getIsMining } from '../src/controller/blockchain';
-import Block, { isValidBlockStructure } from '../src/models/block'
+import { addBlockToChain, getBlockchain, replaceChain, getLatestBlock } from '../src/controller/blockchain';
+import { stopMining } from './pow'
+import Block  from '../src/models/block'
 import portscanner from 'portscanner'
 import { p2pPort } from './server'
 
@@ -118,17 +119,6 @@ const initErrorHandler = (ws: WebSocket) => {
     ws.on('error', () => closeConnection(ws));
 };
 
-
-let otherNodeFoundHash = false
-export const getOtherNodeFoundHash = () => otherNodeFoundHash
-export const setOtherNodeFoundHash = (newValue:boolean) => otherNodeFoundHash = newValue
-
-const stopMining = () => {
-    if(getIsMining()){
-        setOtherNodeFoundHash(true);
-    }
-}
-
 const handleBlockchainResponse = (receivedBlocks: Block[]) => {
     const latestBlock = getLatestBlock()
     const latestReceivedBlock = receivedBlocks[receivedBlocks.length - 1]
@@ -141,7 +131,8 @@ const handleBlockchainResponse = (receivedBlocks: Block[]) => {
         return
     }
     if(latestReceivedBlock.index === latestBlock.index + 1 && addBlockToChain(latestReceivedBlock)){
-        console.log('new received block can be added to blockchain, so stop mining.');
+        console.clear()
+        console.log('new received block can be added to blockchain, so stop mining.!!!!!!!!!!!!!!!!');
         stopMining()
         broadcast(responseLatestMsg())
         return
