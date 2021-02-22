@@ -1,10 +1,10 @@
 import { mineBlock, getBlockchain } from "./controller/blockchain"
-import Block from "./models/block"
 import express from "express"
 import cors from "cors"
 import * as bodyParser  from "body-parser"
 import { getSockets, connectToPeers, initP2PServer, broadcastLatest } from './p2p'
 import portscanner from 'portscanner'
+import { stopMining } from "./pow"
 
 const initHttpServer = ( myHttpPort: number ) => {
   const app = express();
@@ -21,8 +21,10 @@ const initHttpServer = ( myHttpPort: number ) => {
   app.post('/mineBlock', (req, res) => {
       mineBlock(req.body.data).then(() => {
         broadcastLatest()
-        res.sendStatus(200)
-      })
+        res.sendStatus(201)
+      }).catch(() => {
+        res.sendStatus(409)
+      }).then(stopMining)
   });
   
   app.get('/peers', (req, res) => {
