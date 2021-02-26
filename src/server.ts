@@ -5,11 +5,13 @@ import * as bodyParser  from "body-parser"
 import { getSockets, connectToPeers, initP2PServer, broadcastLatest } from './p2p'
 import portscanner from 'portscanner'
 import { stopMining } from "./pow"
+import auth from './routes/auth'
 
 const initHttpServer = ( myHttpPort: number ) => {
   const app = express();
   app.use(cors());
   app.use(bodyParser.json());
+  app.use('/auth',auth)
 
   app.get('/broadcast',(req,res) => {
       broadcastLatest()
