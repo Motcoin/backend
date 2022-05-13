@@ -4,9 +4,9 @@ export const secret = '123467.SOMESECRET.12486'
 
 export const decodeJWT = async(token:string) => {
   let result = '';
-  await jwt.verify(token, secret, (err: any, user: any) => {
-    if(err){
-      console.log(err)
+  await jwt.verify(token, secret, (error: any, user: any) => {
+    if(error){
+      console.log(error)
     } else {
       result = user
     }
@@ -14,18 +14,18 @@ export const decodeJWT = async(token:string) => {
   return result
 }
 
-export const authenticateJWT = (req:any, res:any, next:any) => {
-  const authHeader = req.headers.authorization;
+export const authenticateJWT = (request:any, response:any, next:any) => {
+  const authHeader = request.headers.authorization;
   if (authHeader) {
       const token = authHeader.split(' ')[1];
-      jwt.verify(token, secret, (err: any, username: any) => {
-          if (err) {
-            return res.sendStatus(403);
+      jwt.verify(token, secret, (error: any, username: any) => {
+          if (error) {
+            return response.sendStatus(403);
           }
-          req.username = username;
+          request.username = username;
           next();
       });
   } else {
-      res.sendStatus(401);
+      response.sendStatus(401);
   }
 };

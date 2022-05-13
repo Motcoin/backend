@@ -40,9 +40,9 @@ const initP2PServer = async(p2pPort: number) => {
     });
     //automated peer discovery
     const peers = await lookForPeers()
-    peers.forEach((peer) => {
+    for (const peer of peers) {
       connectToPeers(`ws://localhost:${peer}`)
-    })
+    }
     console.log('listening websocket p2p port on: ' + p2pPort);
 };
 
@@ -54,58 +54,65 @@ const initConnection = (ws: WebSocket) => {
     sockets.push(ws);
     initMessageHandler(ws);
     initErrorHandler(ws);
-    write(ws, queryChainLengthMsg());
+    write(ws, queryChainLengthMessage());
 };
 
-const JSONToObject = <T>(data: string): T | null => {
+const JSONToObject = <T>(data: string): T | undefined => {
     try {
         return JSON.parse(data);
-    } catch (e) {
-        console.log(e);
-        return null
+    } catch (error) {
+        console.log(error);
+        return undefined
     }
 };
 
 const initMessageHandler = (ws: WebSocket) => {
     ws.on('message', (data: string) => {
-        const message: Message | null = JSONToObject<Message>(data);
-        if (message === null) {
+        const message: Message | undefined = JSONToObject<Message>(data);
+        if (!message) {
             console.log('could not parse received JSON message: ' + data);
             return;
         }
         console.log('Received message' + JSON.stringify(message.type));
         switch (message.type) {
             case MessageType.QUERY_LATEST:
-                write(ws, responseLatestMsg());
+                write(ws, responseLatestMessage());
                 break;
             case MessageType.QUERY_ALL:
-                write(ws, responseChainMsg());
+                write(ws, responseChainMessage());
                 break;
-            case MessageType.RESPONSE_BLOCKCHAIN:
-                const receivedBlocks: Block[]|null = JSONToObject<Block[]>(message.data);
-                if (receivedBlocks === null) {
+            case MessageType.RESPONSE_BLOCKCHAIN: {
+                const receivedBlocks: Block[] | undefined = JSONToObject<Block[]>(message.data);
+                if (!receivedBlocks) {
                     console.log('invalid blocks received:');
                     console.log(message.data)
                     break;
                 }
                 handleBlockchainResponse(receivedBlocks);
                 break;
+            }
+                
         }
     });
 };
 
 const write = (ws: WebSocket, message: Message): void => ws.send(JSON.stringify(message));
-const broadcast = (message: Message): void => sockets.forEach((socket) => write(socket, message));
 
-const queryChainLengthMsg = (): Message => ({type: MessageType.QUERY_LATEST, data: null});
+const broadcast = (message: Message): void => {
+    for (const socket of sockets){
+        write(socket, message)
+    }
+}
 
-const queryAllMsg = (): Message => ({type: MessageType.QUERY_ALL, data: null});
+const queryChainLengthMessage = (): Message => ({type: MessageType.QUERY_LATEST, data: undefined});
 
-const responseChainMsg = (): Message => ({
+const queryAllMessage = (): Message => ({type: MessageType.QUERY_ALL, data: undefined});
+
+const responseChainMessage = (): Message => ({
     type: MessageType.RESPONSE_BLOCKCHAIN, data: JSON.stringify(getBlockchain())
 });
 
-const responseLatestMsg = (): Message => ({
+const responseLatestMessage = (): Message => ({
     type: MessageType.RESPONSE_BLOCKCHAIN,
     data: JSON.stringify([getLatestBlock()])
 });
@@ -122,7 +129,7 @@ const initErrorHandler = (ws: WebSocket) => {
 const handleBlockchainResponse = (receivedBlocks: Block[]) => {
     const latestBlock = getLatestBlock()
     const latestReceivedBlock = receivedBlocks[receivedBlocks.length - 1]
-    if(!receivedBlocks.length){
+    if(receivedBlocks.length === 0){
         console.log('received empty blockchain');
         return
     }
@@ -134,18 +141,18 @@ const handleBlockchainResponse = (receivedBlocks: Block[]) => {
         console.clear()
         console.log('new received block can be added to blockchain, so stop mining.!!!!!!!!!!!!!!!!');
         stopMining()
-        broadcast(responseLatestMsg())
+        broadcast(responseLatestMessage())
         return
     }
     if(receivedBlocks.length === 1){
-        queryAllMsg()
+        queryAllMessage()
         return
     }
     replaceChain(receivedBlocks)
 };
 
 const broadcastLatest = (): void => {
-    broadcast(responseLatestMsg());
+    broadcast(responseLatestMessage());
 };
 
 const connectToPeers = (newPeer: string): void => {

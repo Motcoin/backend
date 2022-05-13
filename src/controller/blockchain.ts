@@ -1,5 +1,5 @@
 import Block,{ genesisBlock, isValidBlockStructure } from "../models/block"
-import { ValidatedBlockchain, makeValidatedBlockchain, addNewBlockToChain ,mineNewBlock, getLastBlock as getLatestBlockFromChain, getComputationalEffort  } from "../models/blockchain"
+import { makeValidatedBlockchain, addNewBlockToChain ,mineNewBlock, getLastBlock as getLatestBlockFromChain, getComputationalEffort  } from "../models/blockchain"
 import { getDifficulty, mine } from '../pow'
 
 let blockchain = makeValidatedBlockchain([genesisBlock])

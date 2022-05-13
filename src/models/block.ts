@@ -53,10 +53,10 @@ export const isValidBlockStructure = (block: Block): boolean => {
       && typeof block.data === 'string';
 };
 
-const genesisStamp = 1613312360254
+const genesisStamp = 1_613_312_360_254
 const genesisData = 'Hello World!, im Tomcoin!'
 const genesisHash = '00000e44726feba3bd3d363ed7103c90bddd6008ebf266da1aca91894c64a5cb'
-const genesisNonce = 56031
+const genesisNonce = 56_031
 
 export const blank: Block = {index: 0, previousHash: '', timestamp: genesisStamp, data: genesisData, difficulty: 5, nonce: genesisNonce, hash: genesisHash }
 

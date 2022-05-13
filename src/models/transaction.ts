@@ -15,6 +15,6 @@ interface Transaction {
   id: string
 }
 
-export let unconfirmedTransactions: Transaction[] = []
+export const unconfirmedTransactions: Transaction[] = []
 
 

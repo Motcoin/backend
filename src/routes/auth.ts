@@ -1,9 +1,10 @@
+/* eslint-disable unicorn/prefer-module */
 import { Router } from 'express'
 import { genKeyPair } from '../wallets/gen-key'
 import { secret, authenticateJWT } from '../middleware/jwt'
 import jwt from 'jsonwebtoken'
-import fs from 'fs'
-import path from 'path'
+import fs from 'node:fs'
+import path from 'node:path'
 const router = Router()
 
 interface Keys {
@@ -24,10 +25,11 @@ const saveKeys = () => {
 }
 
 
-router.post('/login',(req, res) => {
-  console.log(req.body);
+router.post('/login',(request, response) => {
+  console.log(request.body);
   
-  const { username } = req.body
+  const { username } = request.body
+  
   console.log('login called by', username);
   loadKeys()
   if(!keys[username]){
@@ -35,13 +37,13 @@ router.post('/login',(req, res) => {
     keys[username] = genKeyPair()
     saveKeys()
   }
-  res.json({
+  response.json({
     accessToken: jwt.sign(username,secret)
   })
 })
 
-router.get('/test',authenticateJWT,(req,res) => {
-  res.send((req as any).username)
+router.get('/test',authenticateJWT,(request,response) => {
+  response.send((request as any).username)
 })
 
 export default router

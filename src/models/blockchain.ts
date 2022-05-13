@@ -3,16 +3,12 @@ import { InvalidHashError, InvalidIndexError, InvalidPreviousHashError, InvalidT
 
 const isValidTimestamp = (newBlock: Block, previousBlock: Block) => {
   const newT = newBlock.timestamp / 1000
-  const prevT = previousBlock.timestamp / 1000
+  const previousT = previousBlock.timestamp / 1000
   const now = Date.now() / 1000
-  if(!previousBlock){
-    return true
-  } else {
-    return  prevT - 60 < newT && newT - 60 < now
-  }
+  return !previousBlock ? true : previousT - 60 < newT && newT - 60 < now;
 }
 
-const isValidNewBlock = (newBlock: Block, previousBlock: Block | undefined): boolean => {
+const isValidNewBlock = (newBlock: Block, previousBlock?: Block): boolean => {
   let result = true;
   result &&= validateBlock(newBlock)
   
@@ -41,7 +37,7 @@ const isValidNewBlock = (newBlock: Block, previousBlock: Block | undefined): boo
   return result
 }
 
-const istValidGenesisBlock = (genesis: Block) => isValidNewBlock(genesis, undefined)
+const istValidGenesisBlock = (genesis: Block) => isValidNewBlock(genesis)
 
 
 export const getLastBlock = (chain: Block[]): Block => {
@@ -60,29 +56,30 @@ export const validateBlockchain = (chain: Block[]): boolean => {
   if(!result){
     console.log('invalid genesis block');
   }
-  for(let i = 1; i < chain.length && result; i++){
-    result &&= isValidNewBlock(chain[i],chain[i-1])
+  for(let index = 1; index < chain.length && result; index++){
+    result &&= isValidNewBlock(chain[index],chain[index-1])
   }
   return result
 }
 
 export const addNewBlockToChain = (chain: ValidatedBlockchain, block: Block): ValidatedBlockchain => {
   return isValidNewBlock(block,getLastBlock(chain))
-    ? chain.concat([block])
+    ? [...chain, block]
     : chain
 }
 
 export const getComputationalEffort = (chain: ValidatedBlockchain) => {
-  return chain.reduce((acc,curr) => acc += Math.pow(2,curr.difficulty),0)
+  return chain.map(chainElement => Math.pow(2,chainElement.difficulty)).reduce((total,value) => total + value)
 }
+
 
 export type ValidatedBlockchain = Block[]
 export const makeValidatedBlockchain = (chain: Block[]) => {
   try{
     validateBlockchain(chain)
     return chain as ValidatedBlockchain
-  } catch(e) {
-    console.error(e)
+  } catch(error) {
+    console.error(error)
     return []
   }
 }
