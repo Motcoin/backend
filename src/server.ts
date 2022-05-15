@@ -18,6 +18,8 @@ import { getKeyForPort } from "./wallets/gen-key";
 import { addToEther, getEther } from "./models/ether";
 import { unspentTransactionOut } from "./models/transaction";
 
+import "./persistence/blockchain";
+
 const initHttpServer = (myHttpPort: number) => {
   const app = express();
   app.use(cors());

@@ -1,3 +1,5 @@
+/* eslint-disable no-undef */
+/* eslint-disable @typescript-eslint/no-var-requires */
 const SHA256 = require("crypto-js/sha256");
 const workerpool = require("workerpool");
 
@@ -13,9 +15,15 @@ const calculateHash = (block) => {
 };
 
 const hexToBinary = (hex) => {
-  return hex
-    .split("")
-    .reduce((acc, curr) => (acc += parseInt(curr, 16).toString(2)), "");
+  return (
+    [...hex]
+      // eslint-disable-next-line unicorn/no-array-reduce
+      .reduce(
+        (accumulator, current) =>
+          (accumulator += Number.parseInt(current, 16).toString(2)),
+        ""
+      )
+  );
 };
 
 const hashMatchesDifficulty = (hash, difficulty) => {
@@ -27,7 +35,7 @@ const hashMatchesDifficulty = (hash, difficulty) => {
 const findBlockForWorker = (block) => {
   let nonce = 0;
   let currentBlock = block;
-  while (true) {
+  for (;;) {
     currentBlock = { ...block, nonce };
     currentBlock.hash = calculateHash(currentBlock);
     console.log(nonce, ":", currentBlock.hash);
