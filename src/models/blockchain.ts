@@ -1,5 +1,6 @@
 import Block, { validateBlock, generateNextBlock } from "./block"
-import { InvalidHashError, InvalidIndexError, InvalidPreviousHashError, InvalidTimestampError } from './error'
+import { InvalidIndexError, InvalidPreviousHashError, InvalidTimestampError } from './error'
+import { processTransactions, Transaction } from "./transaction"
 
 const isValidTimestamp = (newBlock: Block, previousBlock: Block) => {
   const newT = newBlock.timestamp / 1000
@@ -9,8 +10,7 @@ const isValidTimestamp = (newBlock: Block, previousBlock: Block) => {
 }
 
 const isValidNewBlock = (newBlock: Block, previousBlock?: Block): boolean => {
-  let result = true;
-  result &&= validateBlock(newBlock)
+  let result = validateBlock(newBlock)
   
   if(!previousBlock){
     return result
@@ -37,22 +37,21 @@ const isValidNewBlock = (newBlock: Block, previousBlock?: Block): boolean => {
   return result
 }
 
-const istValidGenesisBlock = (genesis: Block) => isValidNewBlock(genesis)
+const isValidGenesisBlock = (genesis: Block) => isValidNewBlock(genesis)
 
 
 export const getLastBlock = (chain: Block[]): Block => {
   return chain[chain.length - 1]
 }
 
-export const mineNewBlock = (chain: ValidatedBlockchain, data: string): Block => {
+export const mineNewBlock = (chain: ValidatedBlockchain, data: Transaction[]): Block => {
   const lastBlock = getLastBlock(chain) 
   const newBlock = generateNextBlock(lastBlock,data)
   return newBlock
 }
 
 export const validateBlockchain = (chain: Block[]): boolean => {
-  let result = true
-  result &&= istValidGenesisBlock(chain[0])
+  let result = isValidGenesisBlock(chain[0])
   if(!result){
     console.log('invalid genesis block');
   }
@@ -63,9 +62,13 @@ export const validateBlockchain = (chain: Block[]): boolean => {
 }
 
 export const addNewBlockToChain = (chain: ValidatedBlockchain, block: Block): ValidatedBlockchain => {
-  return isValidNewBlock(block,getLastBlock(chain))
-    ? [...chain, block]
-    : chain
+  if(!isValidNewBlock(block,getLastBlock(chain))){
+    return chain
+  }
+
+  processTransactions(block.data, block.index);
+
+  return [...chain, block]
 }
 
 export const getComputationalEffort = (chain: ValidatedBlockchain) => {

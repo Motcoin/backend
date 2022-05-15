@@ -1,11 +1,12 @@
 import { SHA256 } from "crypto-js"
 import { InvalidHashError } from "./error"
+import { Transaction } from './transaction'
 
 export default interface Block {
   index: number,
   previousHash: string,
   timestamp: number,
-  data: string,
+  data: Transaction[],
   difficulty: number,
   nonce: number,
   hash?: string
@@ -29,7 +30,7 @@ export const calculateHash = (block: Block): string => {
   return SHA256(block.index + block.previousHash + block.timestamp + block.data + block.difficulty + block.nonce).toString();
 }
 
-export const generateNextBlock = (block: Block, data: string): Block => {
+export const generateNextBlock = (block: Block, data: Transaction[]): Block => {
   const index = block.index + 1
   const previousHash = block.hash || "GENESIS BLOCK!"
   const timestamp = Date.now()
@@ -54,11 +55,11 @@ export const isValidBlockStructure = (block: Block): boolean => {
 };
 
 const genesisStamp = 1_613_312_360_254
-const genesisData = 'Hello World!, im Tomcoin!'
-const genesisHash = '00000e44726feba3bd3d363ed7103c90bddd6008ebf266da1aca91894c64a5cb'
+
+const genesisHash = '26a177199865033f7906ae31a08ff7eb02399533aff038d11cd578056943bbb2'
 const genesisNonce = 56_031
 
-export const blank: Block = {index: 0, previousHash: '', timestamp: genesisStamp, data: genesisData, difficulty: 5, nonce: genesisNonce, hash: genesisHash }
+export const blank: Block = {index: 0, previousHash: '', timestamp: genesisStamp, data: [], difficulty: 5, nonce: genesisNonce, hash: genesisHash }
 
 export const genesisBlock = blank
 

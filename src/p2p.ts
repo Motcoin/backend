@@ -5,13 +5,15 @@ import { stopMining } from './pow'
 import Block  from '../src/models/block'
 import portscanner from 'portscanner'
 import { p2pPort } from './server'
+import { addToEther, ether } from './models/ether';
 
-const sockets: WebSocket[] = [];
+const peers: WebSocket[] = [];
 
-enum MessageType {
+export enum MessageType {
     QUERY_LATEST = 0,
     QUERY_ALL = 1,
     RESPONSE_BLOCKCHAIN = 2,
+    ETHER = 3
 }
 
 interface Message {
@@ -46,12 +48,12 @@ const initP2PServer = async(p2pPort: number) => {
     console.log('listening websocket p2p port on: ' + p2pPort);
 };
 
-const getSockets = () => sockets;
+const getPeers = () => peers;
 
-export const getSocketsLength = () => sockets.length
+export const getPeerisCount = () => peers.length
 
 const initConnection = (ws: WebSocket) => {
-    sockets.push(ws);
+    peers.push(ws);
     initMessageHandler(ws);
     initErrorHandler(ws);
     write(ws, queryChainLengthMessage());
@@ -66,6 +68,8 @@ const JSONToObject = <T>(data: string): T | undefined => {
     }
 };
 
+
+//TODO: refactor this switch case
 const initMessageHandler = (ws: WebSocket) => {
     ws.on('message', (data: string) => {
         const message: Message | undefined = JSONToObject<Message>(data);
@@ -73,7 +77,9 @@ const initMessageHandler = (ws: WebSocket) => {
             console.log('could not parse received JSON message: ' + data);
             return;
         }
+
         console.log('Received message' + JSON.stringify(message.type));
+
         switch (message.type) {
             case MessageType.QUERY_LATEST:
                 write(ws, responseLatestMessage());
@@ -91,15 +97,17 @@ const initMessageHandler = (ws: WebSocket) => {
                 handleBlockchainResponse(receivedBlocks);
                 break;
             }
-                
+            case MessageType.ETHER: {
+                addToEther(message.data)
+            }
         }
     });
 };
 
 const write = (ws: WebSocket, message: Message): void => ws.send(JSON.stringify(message));
 
-const broadcast = (message: Message): void => {
-    for (const socket of sockets){
+export const broadcast = (message: Message): void => {
+    for (const socket of peers){
         write(socket, message)
     }
 }
@@ -120,7 +128,7 @@ const responseLatestMessage = (): Message => ({
 const initErrorHandler = (ws: WebSocket) => {
     const closeConnection = (myWs: WebSocket) => {
         console.log('connection failed to peer: ' + myWs.url);
-        sockets.splice(sockets.indexOf(myWs), 1);
+        peers.splice(peers.indexOf(myWs), 1);
     };
     ws.on('close', () => closeConnection(ws));
     ws.on('error', () => closeConnection(ws));
@@ -166,4 +174,4 @@ const connectToPeers = (newPeer: string): void => {
     });
 };
 
-export { connectToPeers, broadcastLatest, initP2PServer, getSockets };
+export { connectToPeers, broadcastLatest, initP2PServer, getPeers as getSockets };

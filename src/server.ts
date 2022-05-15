@@ -2,10 +2,15 @@ import { mineBlock, getBlockchain } from "./controller/blockchain"
 import express from "express"
 import cors from "cors"
 import * as bodyParser  from "body-parser"
-import { getSockets, connectToPeers, initP2PServer, broadcastLatest } from './p2p'
+import { getSockets, connectToPeers, initP2PServer, broadcastLatest, MessageType, broadcast } from './p2p'
 import portscanner from 'portscanner'
 import { stopMining } from "./pow"
 import auth from './routes/auth'
+import nodeInfo from './routes/nodeInfo'
+import { getKeyForPort } from "./wallets/gen-key"
+import { addToEther, getEther } from "./models/ether"
+import { request } from "http"
+import { unspentTransactionOut } from "./models/transaction"
 
 const initHttpServer = ( myHttpPort: number ) => {
   const app = express();
@@ -15,6 +20,7 @@ const initHttpServer = ( myHttpPort: number ) => {
       extended: true
   }));
   app.use('/auth',auth)
+  app.use('/node',nodeInfo)
 
   app.get('/broadcast',(request,response) => {
       broadcastLatest()
@@ -24,13 +30,21 @@ const initHttpServer = ( myHttpPort: number ) => {
       response.send(getBlockchain());
   });
   app.post('/mineBlock', (request, response) => {
-      mineBlock(request.body.data).then(() => {
+      mineBlock().then(() => {
         broadcastLatest()
         response.sendStatus(201)
       }).catch(() => {
         response.sendStatus(409)
       }).then(stopMining)
   });
+
+  app.get('/transaction',(request,response) => {
+      response.send(getEther())
+  })
+
+  app.get('/unspent',(request, response) => {
+      response.send(unspentTransactionOut)
+  })
   
   app.get('/peers', (request, response) => {
       response.send(getSockets().map(( s: any ) => s._socket.remoteAddress + ':' + s._socket.remotePort));
@@ -39,6 +53,17 @@ const initHttpServer = ( myHttpPort: number ) => {
       connectToPeers(request.body.peer);
       response.send();
   });
+
+  app.post('/transaction', (request, response) => {
+      addToEther(request.body)
+
+      const message = {
+          type: MessageType.ETHER,
+          data: request.body
+      }
+
+      broadcast(message)
+  })
 
   app.listen(myHttpPort, () => {
       console.log('Listening http on port: ' + myHttpPort);
@@ -70,13 +95,17 @@ const findFreePort = async (startPort:number):Promise<number> => {
     }
 }
 
-findFreePort(8000).then((port:number) => {
+export let apiPort = 8000
+
+findFreePort(apiPort).then((port:number) => {
+    apiPort = port
+    getKeyForPort(port.toString())
     initHttpServer(port)
 })
 
 export let p2pPort = 11_111
 
-findFreePort(11_111).then((port:number) => {
+findFreePort(p2pPort).then((port:number) => {
     p2pPort = port
     initP2PServer(p2pPort)
 })

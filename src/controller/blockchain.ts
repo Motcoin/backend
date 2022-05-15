@@ -1,23 +1,36 @@
 import Block,{ genesisBlock, isValidBlockStructure } from "../models/block"
 import { makeValidatedBlockchain, addNewBlockToChain ,mineNewBlock, getLastBlock as getLatestBlockFromChain, getComputationalEffort  } from "../models/blockchain"
+import { getEther, removeFromEther } from "../models/ether"
+import { getCoinbaseTransaction } from "../models/transaction"
 import { getDifficulty, mine } from '../pow'
+import { nodeKeyPair } from "../wallets/gen-key"
 
 let blockchain = makeValidatedBlockchain([genesisBlock])
 
-export const mineBlock = (data :string): Promise<Block | Error> => {
+export const handleNewBlock = (newBlock: Block) => {
+  blockchain = addNewBlockToChain(blockchain, newBlock)
+
+  const transactions = newBlock.data
+  removeFromEther(transactions)
+
+  return newBlock
+}
+
+export const mineBlock = (): Promise<Block | Error> => {
   /**
-   * 1. get blockchain
-   * 2. get difficulty of blockchain
-   * 3. start puzzle with difficulty asynchronously
+   * 1. get difficulty of blockchain
+   * 2. build coinbase transaction
+   * 3. get transactions from ether
    * 4. add to blockchain and return
    **/
-  const blankBlock = mineNewBlock(blockchain,data);
+
+  const coinbaseTransaction = getCoinbaseTransaction(nodeKeyPair.pub,getLatestBlock().index + 1)
+  const regularTransactions = getEther()
+
+  const blankBlock = mineNewBlock(blockchain,[coinbaseTransaction,...regularTransactions]);
   const difficulty = getDifficulty(blockchain)
   console.log('start mining');
-  return mine({...blankBlock, difficulty}).then((newBlock: Block) => {
-    blockchain = addNewBlockToChain(blockchain, newBlock)
-    return newBlock
-  })
+  return mine({...blankBlock, difficulty}).then(handleNewBlock)
 }
 
 export const shouldReplaceChain = (chain: Block[]):boolean => {
@@ -47,6 +60,8 @@ export const addBlockToChain = (block: Block) => {
     return false
   }
   blockchain = addNewBlockToChain(blockchain,block)
+  //questionable if this should be here
+  removeFromEther(block.data)
   return true
 }
 
